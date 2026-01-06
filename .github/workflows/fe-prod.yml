@@ -1,0 +1,52 @@
+name: Frontend – Deploy (Production)
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REPOSITORY: ${{ secrets.FRONTEND_ECR_REPOSITORY }}
+  IMAGE_TAG: ${{ github.sha }}
+  TARGET_INSTANCE_ID: ${{ secrets.FRONTEND_PROD_INSTANCE_ID }}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  production:
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy to Production (Inline SSM)
+        run: |
+          aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --instance-ids "$TARGET_INSTANCE_ID" \
+            --comment "Deploy FRONTEND PROD $IMAGE_TAG" \
+            --parameters '{
+              "commands": [
+                "set -e",
+                "aws ecr get-login-password --region '"$AWS_REGION"' | docker login --username AWS --password-stdin '"$ECR_REPOSITORY"'",
+                "docker pull '"$ECR_REPOSITORY:$IMAGE_TAG"'",
+                "docker stop frontend-prod || true",
+                "docker rm frontend-prod || true",
+                "docker run -d \
+                  --name frontend-prod \
+                  -p 80:80 \
+                  --restart unless-stopped \
+                  '"$ECR_REPOSITORY:$IMAGE_TAG"'"
+              ]
+            }'

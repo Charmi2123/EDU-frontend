@@ -1,0 +1,1874 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Talking Head - MP3 example</title>
+  <style>
+    html,
+    body {
+      background-color: #202020;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      /* Prevent scrollbars triggering resize loops */
+    }
+
+    #background {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url('/backgrounds/classroom_bg.png');
+      background-size: cover;
+      background-position: center;
+      z-index: 0;
+    }
+
+    #avatar {
+      display: block;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 30%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* Whiteboard Board Image Container */
+    #whiteboardBoard {
+      position: absolute;
+      top: -5%;
+      right: 2%;
+      width: 65%;
+      height: 85%;
+      z-index: 2;
+      opacity: 1;
+      transition: opacity 0.5s ease;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #whiteboardBoard.visible {
+      opacity: 1;
+    }
+
+    /* Board backdrop blur REMOVED as per request to avoid double-board look */
+    /* #whiteboardBoard::before { ... } */
+
+    /* Actual board image */
+    #whiteboardBoard img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      /* Enhanced shadow for depth */
+      filter: drop-shadow(0 8px 30px rgba(0, 0, 0, 0.5));
+    }
+
+    /* Text visually inside the board */
+    /* Text visually inside the board */
+    #whiteboardTextContent {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 85%;
+      max-height: 85%;
+
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: flex-start;
+
+      color: #1a1a1a;
+      font-size: 16px;
+      line-height: 1.6;
+      text-align: left;
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-weight: 500;
+
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    /* Title styling */
+    #whiteboardTextContent .slide-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #0a0a0a;
+      margin-bottom: 15px;
+      text-align: center;
+      width: 100%;
+      border-bottom: 2px solid #333;
+      padding-bottom: 10px;
+    }
+
+    /* Bullet points styling */
+    #whiteboardTextContent .slide-bullets {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      width: 100%;
+    }
+
+    #whiteboardTextContent .slide-bullets li {
+      position: relative;
+      padding-left: 25px;
+      margin-bottom: 12px;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    #whiteboardTextContent .slide-bullets li::before {
+      content: '•';
+      position: absolute;
+      left: 0;
+      font-size: 20px;
+      font-weight: bold;
+      color: #333;
+    }
+
+    /* Narration styling (shown when no bullets) */
+    #whiteboardTextContent .slide-narration {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #222;
+      text-align: left;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    #whiteboardTextContent .slide-narration p {
+      margin: 0 0 12px 0;
+    }
+
+    #whiteboardTextContent .slide-narration strong {
+      color: #000;
+      font-weight: 600;
+    }
+
+    /* Subnarrations styling */
+    #whiteboardTextContent .slide-subnarrations {
+      width: 100%;
+    }
+
+    #whiteboardTextContent .subnarration-item {
+      margin-bottom: 16px;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.05);
+      border-radius: 8px;
+      border-left: 3px solid #2563eb;
+    }
+
+    #whiteboardTextContent .subnarration-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 6px;
+    }
+
+    #whiteboardTextContent .subnarration-summary {
+      font-size: 13px;
+      line-height: 1.5;
+      color: #475569;
+    }
+
+    /* Questions styling (last slide) */
+    #whiteboardTextContent .slide-questions {
+      width: 100%;
+    }
+
+    #whiteboardTextContent .question-list {
+      list-style: decimal;
+      padding-left: 24px;
+      margin: 0;
+    }
+
+    #whiteboardTextContent .question-list li {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #1e293b;
+      margin-bottom: 12px;
+      padding-left: 8px;
+    }
+
+    #whiteboardTextContent .question-list li::marker {
+      color: #2563eb;
+      font-weight: 600;
+    }
+
+    /* Scrollbar for board text */
+    #whiteboardTextContent::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    #whiteboardTextContent::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 2px;
+    }
+
+    #controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: absolute;
+      top: 50px;
+      left: calc(60% + 50px);
+      right: 50px;
+      bottom: 50px;
+      z-index: 10;
+    }
+
+    #json {
+      width: 100%;
+      height: 600px;
+      background-color: rgba(255, 255, 255, 0.2);
+      color: white;
+      font-size: 14px;
+      border: none;
+      padding: 5px 10px;
+      resize: none;
+      overflow: hidden;
+    }
+
+    #loading {
+      position: absolute;
+      top: 50px;
+      left: 50px;
+      font-size: 20px;
+      color: white;
+      z-index: 10;
+    }
+
+    button {
+      font-size: 20px;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+
+    #unlockAudio {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+
+      opacity: 0;
+      /* Invisible */
+      border: none;
+      outline: none;
+      background: transparent;
+
+      z-index: 999999;
+      /* On top of everything */
+      cursor: pointer;
+    }
+
+    /* Narration Text Overlay */
+    #narrationOverlay {
+      position: fixed;
+      bottom: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: 90%;
+      width: auto;
+      padding: 15px 25px;
+      background: rgba(253, 253, 253, 0.9);
+      backdrop-filter: blur(10px);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      z-index: 5;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    #narrationOverlay.visible {
+      opacity: 1;
+    }
+
+    #narrationText {
+      color: white;
+      font-size: 16px;
+      line-height: 1.5;
+      text-align: center;
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    /* Hide scrollbar but keep functionality */
+    #narrationText::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    #narrationText::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 2px;
+    }
+
+    /* Slide Progress Bar */
+    #slideProgressContainer {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      max-width: 600px;
+      z-index: 100;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    #slideProgressContainer.visible {
+      opacity: 1;
+    }
+
+    #slideProgressInfo {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      padding: 0 5px;
+    }
+
+    #slideProgressText {
+      font-size: 14px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.95);
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    #slideProgressPercentage {
+      font-size: 14px;
+      font-weight: 700;
+      color: rgba(255, 255, 255, 0.95);
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    #slideProgressBarBg {
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    #slideProgressBarFill {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+      border-radius: 10px;
+      transition: width 0.5s ease;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+      position: relative;
+      overflow: hidden;
+    }
+
+    #slideProgressBarFill::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+      0% {
+        transform: translateX(-100%);
+      }
+
+      100% {
+        transform: translateX(100%);
+      }
+    }
+  </style>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js/+esm",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+      "talkinghead": "https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@1.5/modules/talkinghead.mjs"
+    }
+  }
+  </script>
+
+  <script type="module">
+    // --- Audio Capture Logic (Monkey Patch) - MUST BE FIRST ---
+    // let audioDest;
+    // const originalConnect = AudioNode.prototype.connect;
+    // AudioNode.prototype.connect = function (destination, outputIndex, inputIndex) {
+    //   if (audioDest && destination === destination.context.destination) {
+    //     try {
+    //       originalConnect.call(this, audioDest);
+    //     } catch (e) { }
+    //   }
+    //   return originalConnect.apply(this, arguments);
+    // };
+
+    import { TalkingHead } from "talkinghead";
+    import * as THREE from "three";
+
+    const nodeAvatar = document.getElementById('avatar');
+    const nodeLoading = document.getElementById('loading');
+    const narrationOverlay = document.getElementById('narrationOverlay');
+    const narrationText = document.getElementById('narrationText');
+    const whiteboardText = document.getElementById('whiteboardBoard'); // Updated to use Board Container
+    const whiteboardTextContent = document.getElementById('whiteboardTextContent');
+
+    // Progress bar elements
+    const slideProgressContainer = document.getElementById('slideProgressContainer');
+    const slideProgressText = document.getElementById('slideProgressText');
+    const slideProgressPercentage = document.getElementById('slideProgressPercentage');
+    const slideProgressBarFill = document.getElementById('slideProgressBarFill');
+
+
+    // --- State Management ---
+    const STATE = {
+      IDLE: 'IDLE',
+      PRELOADING: 'PRELOADING',
+      PLAYING: 'PLAYING',
+      PAUSED: 'PAUSED',
+      WAITING_FOR_QUESTION: 'WAITING_FOR_QUESTION',
+      CHAT_MODE: 'CHAT_MODE',
+      CHAT_SPEAKING: 'CHAT_SPEAKING'
+    };
+    let currentState = STATE.IDLE;
+
+    let lectureData = [];
+    let preloadedSlides = [];
+    let currentSlideIndex = 0;
+
+    let mediaRecorder;
+    let recordedChunks = [];
+
+    // Initialize TalkingHead with dummy TTS endpoint (we'll use browser SpeechSynthesis instead)
+    const head = new TalkingHead(nodeAvatar, {
+      ttsEndpoint: "https://texttospeech.googleapis.com/v1beta1/text:synthesize",
+      ttsApikey: "", // Won't be used, but library requires it
+      lipsyncModules: ["en", "fi"],
+      cameraView: "full"
+    });
+
+    // audioDest = head.audioCtx.createMediaStreamDestination();
+
+    // --- Voice Recognition Setup ---
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition;
+    let lastTranscript = '';
+
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.lang = 'en-IN';
+      recognition.continuous = true; // Keep listening
+      recognition.interimResults = true; // Get interim results for display
+
+      recognition.onresult = (event) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        transcript = transcript.toLowerCase().trim();
+        lastTranscript = transcript;
+
+        console.log("🎤 Voice Input:", transcript);
+
+        // Send transcript to React for display in overlay
+        window.parent.postMessage({
+          type: 'EVT_VOICE_TRANSCRIPT',
+          transcript: transcript
+        }, '*');
+
+        // Check for final result
+        if (event.results[event.results.length - 1].isFinal) {
+          console.log("🎤 Final transcript:", transcript);
+
+          // Yes keywords - open chat
+          const yesKeywords = ["yes", "ha", "haan", "haa", "yeah", "yep", "sure", "okay", "ok", "question", "doubt", "ask"];
+          // No keywords - continue to next slide
+          const noKeywords = ["no", "nope", "nahi", "na", "next", "continue", "skip", "no question", "nothing"];
+
+          if (yesKeywords.some(kw => transcript.includes(kw))) {
+            console.log("✅ YES detected - Opening chat");
+            handleYesResponse();
+          } else if (noKeywords.some(kw => transcript.includes(kw))) {
+            console.log("✅ NO detected - Moving to next slide");
+            handleNoResponse();
+          }
+        }
+      };
+
+      recognition.onerror = (event) => {
+        console.error("🎤 Recognition error:", event.error);
+        if (event.error === 'no-speech') {
+          // No speech detected, just continue
+          console.log("🎤 No speech detected, waiting...");
+        }
+      };
+
+      recognition.onend = () => {
+        console.log("🎤 Recognition ended, state:", currentState);
+        // Restart if still waiting for question
+        if (currentState === STATE.WAITING_FOR_QUESTION) {
+          try {
+            recognition.start();
+            console.log("🎤 Restarted recognition");
+          } catch (e) {
+            console.warn("🎤 Could not restart recognition:", e);
+          }
+        }
+      };
+    }
+
+    // Handle NO response - move to next slide
+    async function handleNoResponse() {
+      if (currentState !== STATE.WAITING_FOR_QUESTION) return;
+      console.log("➡️ No response - continuing to next slide");
+
+      // Stop recognition
+      if (recognition) {
+        try { recognition.stop(); } catch (e) { }
+      }
+
+      // Notify React
+      window.parent.postMessage({ type: 'EVT_VOICE_TRIGGER', response: 'NO' }, '*');
+
+      // Move to next slide
+      await setMachineState(STATE.PLAYING);
+    }
+
+    // --- Update Slide Progress Bar ---
+    function updateSlideProgress() {
+      const totalSlides = lectureData.length;
+      const currentSlide = currentSlideIndex + 1;
+      const percentage = totalSlides > 0 ? Math.round((currentSlide / totalSlides) * 100) : 0;
+
+      slideProgressText.textContent = `Slide ${currentSlide} / ${totalSlides}`;
+      slideProgressPercentage.textContent = `${percentage}%`;
+      slideProgressBarFill.style.width = `${percentage}%`;
+
+      // Show progress bar when lecture starts
+      if (totalSlides > 0) {
+        slideProgressContainer.classList.add('visible');
+      }
+
+      console.log(`📊 Progress: Slide ${currentSlide}/${totalSlides} (${percentage}%)`);
+    }
+
+
+    // --- Preloading Logic ---
+
+    async function loadLectureData() {
+      if (currentState !== STATE.IDLE) return;
+      currentState = STATE.PRELOADING;
+
+      try {
+        // nodeLoading.textContent = "Analyzing Lecture...";
+        const lectureId = new URLSearchParams(window.location.search).get('lectureId');
+        if (!lectureId) throw new Error("No Lecture ID provided");
+
+        const res = await fetch(`https://api.edinai.inaiverse.com/lectures/${lectureId}/play`);
+        if (!res.ok) throw new Error("Failed to fetch lecture");
+        const data = await res.json();
+        const detailUrl = "https://api.edinai.inaiverse.com" + data.lecture_url;
+
+        const detailRes = await fetch(detailUrl);
+        const detailData = await detailRes.json();
+
+        lectureData = (detailData.slides || []).map((slide, index) => ({
+          audio_url: "https://api.edinai.inaiverse.com" + slide.audio_url,
+          narration: "",
+          title: slide.title || "",
+          bullets: slide.bullets || [],
+          subnarrations: slide.subnarrations || [],
+          question: slide.question || "",
+          isLastSlide: index === (detailData.slides || []).length - 1
+        }));
+
+        await preloadSlides();
+
+        // Only set to IDLE if we haven't started playing yet
+        if (currentState === STATE.PRELOADING) {
+          currentState = STATE.IDLE;
+          // nodeLoading.textContent = "Ready to Begin";
+          // Send READY again just in case
+          window.parent.postMessage({ type: 'EVT_READY' }, '*');
+        }
+
+      } catch (e) {
+        console.error(e);
+        nodeLoading.textContent = "Preload Error: " + e.message;
+      }
+    }
+
+    async function preloadSlides() {
+      for (let i = 0; i < lectureData.length; i++) {
+        // If first slide is already done, show generic loading
+        // if (i > 0) {
+        //   nodeLoading.textContent = `Preloading Slide ${i + 1}/${lectureData.length}...`;
+        // } else {
+        //   nodeLoading.textContent = `Loading First Slide...`;
+        // }
+
+        try {
+          const slide = lectureData[i];
+          const prepared = await prepareSlideAudio(slide.audio_url, slide.narration);
+          if (prepared) preloadedSlides.push(prepared);
+
+          // Early Ready Signal: After 1st slide
+          if (i === 0) {
+            console.log('✅ First slide loaded - Enabling Start');
+            window.parent.postMessage({ type: 'EVT_READY' }, '*');
+            // nodeLoading.textContent = "Ready to Begin (Background loading...)";
+
+            // Allow state transition to IDLE or Playable so buttons work
+            // But we keep 'currentState' as PRELOADING locally until loadLectureData finishes?
+            // No, React side needs EVT_READY. React side doesn't care about iframe internal state for the button enable
+            // But the 'CMD_START' handler in iframe needs to work.
+
+            // We need to briefly set state to IDLE so CMD_START works?
+            // Actually CMD_START logic:
+            // if (mediaRecorder.state === 'inactive') { ... startLectureLoop() }
+            // It doesn't strictly check 'currentState' to allow start, it checks mediaRecorder.
+
+            // But 'loadLectureData' sets 'currentState = STATE.PRELOADING' at start.
+            // Let's allow it.
+          }
+
+        } catch (e) {
+          console.error("Failed to preload slide " + i, e);
+        }
+      }
+    }
+
+    // async function prepareSlideAudio(url, narration, forcePreload = false) {
+    //   console.log(`📥 Preparing audio: ${url}`);
+    //   try {
+    //     const resp = await fetch(url);
+    //     if (!resp.ok) throw new Error(`Fetch failed: ${resp.status}`);
+
+    //     const blob = await resp.blob();
+    //     // Force mp3 mime type if missing, critical for Groq
+    //     const mimeType = blob.type && blob.type !== "" ? blob.type : "audio/mpeg";
+    //     const file = new File([blob], "audio.mp3", { type: mimeType });
+
+    //     const ab = await file.arrayBuffer();
+    //     const audioBuffer = await head.audioCtx.decodeAudioData(ab);
+
+    //     // Hardcoded key as per previous fix
+    //     const VITE_GROQ_API_KEY = "";
+
+    //     let words = [], wtimes = [], wdurations = [];
+    //     let gestures = [];
+
+    async function prepareSlideAudio(url, narration, forcePreload = false) {
+      console.log(`📥 Preparing audio: ${url}`);
+      try {
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`Fetch failed: ${resp.status}`);
+
+        const blob = await resp.blob();
+        // Force mp3 mime type if missing, critical for Groq
+        const mimeType = blob.type && blob.type !== "" ? blob.type : "audio/mpeg";
+        const file = new File([blob], "audio.mp3", { type: mimeType });
+
+        const ab = await file.arrayBuffer();
+        const audioBuffer = await head.audioCtx.decodeAudioData(ab);
+
+        // Hardcoded key as per previous fix
+        // Get API key from URL parameter (passed from React component)
+        const urlParams = new URLSearchParams(window.location.search);
+        const VITE_GROQ_API_KEY = urlParams.get('apiKey') || "";
+
+        console.log('🔑 API Key received:', VITE_GROQ_API_KEY ? `${VITE_GROQ_API_KEY.substring(0, 10)}...` : 'EMPTY');
+        console.log('🔗 Full URL:', window.location.href);
+
+        if (!VITE_GROQ_API_KEY) {
+          console.warn("⚠️ Groq API key not provided. Transcription will fail.");
+        }
+<<<<<<< HEAD
+
+=======
+>>>>>>> raj_dev
+
+        let words = [], wtimes = [], wdurations = [];
+        let gestures = [];
+
+        try {
+          const form = new FormData();
+          form.append("file", file);
+          form.append("model", "whisper-large-v3-turbo");
+          // form.append("language", "en"); // Allow auto-detect for Hindi/Mixed
+          form.append("response_format", "verbose_json");
+
+          console.log("📝 Sending to Groq for transcription...");
+          const groqResp = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+            method: "POST",
+            body: form,
+            headers: { "Authorization": `Bearer ${VITE_GROQ_API_KEY}` }
+          });
+
+          if (groqResp.ok) {
+            const json = await groqResp.json();
+            if (json && json.segments) {
+              json.segments.forEach(s => {
+                words.push(s.text.trim());
+                wtimes.push(Math.round(s.start * 1000));
+                wdurations.push(Math.round((s.end - s.start) * 1000));
+              });
+              console.log(`✅ Transcription success: ${words.length} words`);
+
+              // Generate automatic gestures based on word timing
+              // Use standard generic gestures "A", "B", "C" for variety
+              const availableGestures = ["A", "B", "C"];
+              const totalDuration = audioBuffer.duration * 1000;
+              let nextGestureTime = 500;
+              while (nextGestureTime < totalDuration - 1000) {
+                const randomGesture = availableGestures[Math.floor(Math.random() * availableGestures.length)];
+                gestures.push([nextGestureTime, 2000, randomGesture]);
+                nextGestureTime += 3000 + Math.random() * 3000;
+              }
+
+            }
+          } else {
+            const errText = await groqResp.text();
+            console.error("❌ Groq API Failed:", groqResp.status, errText);
+          }
+        } catch (e) {
+          console.error("❌ Transcription error:", e);
+        }
+
+        // Return object compatible with head.speakAudio
+        return {
+          audio: audioBuffer,
+          words,
+          wtimes,
+          wdurations,
+          text: narration,
+          gestures, // Include generated gestures
+          preloadOnly: forcePreload // Flag to prevent auto-play during preload
+        };
+      } catch (e) {
+        console.error("❌ prepareSlideAudio failed:", e);
+        return null;
+      }
+    }
+
+    // --- Core State Logic ---
+
+    async function setMachineState(newState) {
+      console.log(`🔄 State Transition: ${currentState} → ${newState}`);
+      const oldState = currentState;
+      currentState = newState;
+
+      // Notify parent React component
+      window.parent.postMessage({
+        type: 'EVT_SYNC_STATE',
+        state: newState,
+        oldState: oldState,
+        timestamp: Date.now(),
+        slideIndex: currentSlideIndex,
+        totalSlides: lectureData.length
+      }, '*');
+
+      // Handle state-specific actions
+      // ✅ CRITICAL FIX: Don't suspend AudioContext during CHAT_SPEAKING
+      if (newState === STATE.PAUSED || newState === STATE.WAITING_FOR_QUESTION) {
+        // Pause slide playback
+        console.log(`⏸️  Pausing slide: Recording=${mediaRecorder?.state}, Audio=${head.audioCtx.state}`);
+
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+          try {
+            mediaRecorder.pause();
+            console.log('✅ Recording paused');
+          } catch (e) {
+            console.error('❌ Failed to pause recording:', e);
+          }
+        }
+
+<<<<<<< HEAD
+        // if (head.audioCtx.state === 'running') {
+        //   try {
+        //     await head.audioCtx.suspend();
+        //     console.log('✅ Audio context suspended');
+        //   } catch (e) {
+        //     console.error('❌ Failed to suspend audio:', e);
+        //   }
+        // }
+=======
+>>>>>>> raj_dev
+
+        const ensureAudioContext = async () => {
+          if (head.audioCtx.state !== 'running') {
+            await head.audioCtx.resume();
+            console.log(':white_tick: AudioContext resumed');
+          }
+        };
+
+        head.stop();
+        console.log('✅ Avatar stopped');
+
+        // Clear only the text content, keep board image visible
+        // whiteboardTextContent.innerHTML = '';
+      }
+      else if (newState === STATE.CHAT_MODE) {
+        // ✅ CRITICAL: Don't suspend AudioContext - chatbot needs it!
+        console.log(`💬 Entering chat mode: Recording=${mediaRecorder?.state}`);
+
+        // Only pause recording, keep AudioContext ready
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+          try {
+            mediaRecorder.pause();
+            console.log('✅ Recording paused for chat');
+          } catch (e) {
+            console.error('❌ Failed to pause recording:', e);
+          }
+        }
+
+        // Stop slide audio but keep context running
+        head.stop();
+        console.log('✅ Slide audio stopped, AudioContext kept running for chatbot');
+      }
+      else if (newState === STATE.CHAT_SPEAKING) {
+        // ✅ Chatbot is speaking - ensure AudioContext is running
+        console.log(`🤖 Chatbot speaking: Audio=${head.audioCtx.state}`);
+
+        if (head.audioCtx.state !== 'running') {
+          try {
+            await head.audioCtx.resume();
+            console.log('✅ Audio context resumed for chatbot');
+          } catch (e) {
+            console.error('❌ Failed to resume audio:', e);
+          }
+        }
+      }
+      else if (newState === STATE.PLAYING) {
+        // Resume everything
+        console.log(`▶️  Resuming: Recording=${mediaRecorder?.state}, Audio=${head.audioCtx.state}`);
+
+        if (head.audioCtx.state === 'suspended') {
+          try {
+            await head.audioCtx.resume();
+            console.log('✅ Audio context resumed');
+          } catch (e) {
+            console.error('❌ Failed to resume audio:', e);
+          }
+        }
+
+        if (mediaRecorder && mediaRecorder.state === 'paused') {
+          try {
+            mediaRecorder.resume();
+            console.log('✅ Recording resumed');
+          } catch (e) {
+            console.error('❌ Failed to resume recording:', e);
+          }
+        }
+
+        head.start();
+        console.log('✅ Avatar started');
+      }
+    }
+
+    async function startLectureLoop() {
+      console.log('🎬 Starting lecture loop...');
+      console.log(`📊 Preloaded slides: ${preloadedSlides.length}`);
+      console.log(`📊 Current slide index: ${currentSlideIndex}`);
+
+      if (preloadedSlides.length === 0) {
+        console.error('❌ No slides preloaded!');
+        return;
+      }
+
+      // Calculate Total Duration
+      const totalDuration = preloadedSlides.reduce((acc, s) => acc + (s.audio ? s.audio.duration : 0), 0);
+      console.log(`⏱️ Total Lecture Duration: ${totalDuration.toFixed(2)}s`);
+
+      if (head.audioCtx.state === 'suspended') {
+        console.log('🔊 Resuming audio context...');
+        await head.audioCtx.resume();
+      }
+
+      await setMachineState(STATE.PLAYING);
+
+      for (; currentSlideIndex < preloadedSlides.length; currentSlideIndex++) {
+        const slideAudio = preloadedSlides[currentSlideIndex];
+        console.log(`\n📍 Processing slide ${currentSlideIndex + 1}/${preloadedSlides.length}`);
+
+        // Check for external Pause OR Chat Mode
+        while (currentState === STATE.PAUSED || currentState === STATE.CHAT_MODE) {
+          await new Promise(r => setTimeout(r, 200));
+        }
+
+        if (slideAudio) {
+          // Update progress bar for current slide
+          updateSlideProgress();
+
+          // Show content ON WHITEBOARD based on priority
+          const currentSlide = lectureData[currentSlideIndex];
+
+          // Content flags
+          const hasTitle = currentSlide && currentSlide.title;
+          const hasBullets = currentSlide && currentSlide.bullets && currentSlide.bullets.length > 0;
+          const hasSubnarrations = currentSlide && currentSlide.subnarrations && currentSlide.subnarrations.length > 0;
+          const hasQuestion = currentSlide && currentSlide.question && currentSlide.question.trim();
+          const isLastSlide = currentSlide && currentSlide.isLastSlide;
+
+          // Clear previous content
+          whiteboardTextContent.innerHTML = '';
+
+          // Always show title if exists
+          if (hasTitle) {
+            const titleEl = document.createElement('div');
+            titleEl.className = 'slide-title';
+            titleEl.textContent = currentSlide.title;
+            whiteboardTextContent.appendChild(titleEl);
+          }
+
+          // PRIORITY 1: If last slide and has question, show questions
+          if (isLastSlide && hasQuestion) {
+            const questionContainer = document.createElement('div');
+            questionContainer.className = 'slide-questions';
+
+            // Parse questions (split by newlines and number prefix)
+            const questions = currentSlide.question.split('\n').filter(q => q.trim());
+
+            const questionList = document.createElement('ol');
+            questionList.className = 'question-list';
+
+            questions.forEach(q => {
+              const li = document.createElement('li');
+              // Remove leading number and dot if present
+              li.textContent = q.replace(/^\d+\.\s*/, '').trim();
+              questionList.appendChild(li);
+            });
+
+            questionContainer.appendChild(questionList);
+            whiteboardTextContent.appendChild(questionContainer);
+            console.log(`📝 Displaying questions on whiteboard (last slide)`);
+          }
+          // PRIORITY 2: If bullets exist, show bullets
+          else if (hasBullets) {
+            const bulletList = document.createElement('ul');
+            bulletList.className = 'slide-bullets';
+            currentSlide.bullets.forEach(bullet => {
+              const li = document.createElement('li');
+              li.textContent = bullet;
+              bulletList.appendChild(li);
+            });
+            whiteboardTextContent.appendChild(bulletList);
+            console.log(`📝 Displaying bullets on whiteboard`);
+          }
+          // PRIORITY 3: If NO bullets but subnarrations exist, show subnarrations
+          else if (hasSubnarrations) {
+            const subContainer = document.createElement('div');
+            subContainer.className = 'slide-subnarrations';
+
+            currentSlide.subnarrations.forEach(sub => {
+              const subItem = document.createElement('div');
+              subItem.className = 'subnarration-item';
+
+              if (sub.title) {
+                const subTitle = document.createElement('div');
+                subTitle.className = 'subnarration-title';
+                subTitle.textContent = sub.title;
+                subItem.appendChild(subTitle);
+              }
+
+              if (sub.summary) {
+                const subSummary = document.createElement('div');
+                subSummary.className = 'subnarration-summary';
+                subSummary.textContent = sub.summary;
+                subItem.appendChild(subSummary);
+              }
+
+              subContainer.appendChild(subItem);
+            });
+
+            whiteboardTextContent.appendChild(subContainer);
+            console.log(`📝 Displaying subnarrations on whiteboard (no bullets)`);
+          }
+          // PRIORITY 4: If no bullets and no subnarrations, just show title (already added above)
+          else {
+            console.log(`📝 Displaying only title on whiteboard`);
+          }
+
+          // Show whiteboard if we have any content
+          if (hasTitle || hasBullets || hasSubnarrations || (isLastSlide && hasQuestion)) {
+            whiteboardText.classList.add('visible');
+            console.log(`📝 Whiteboard visible - Title: ${hasTitle ? 'Yes' : 'No'}, Bullets: ${hasBullets ? currentSlide.bullets.length : 0}, Subnarrations: ${hasSubnarrations ? currentSlide.subnarrations.length : 0}, Questions: ${isLastSlide && hasQuestion ? 'Yes' : 'No'}`);
+          }
+
+          console.log('🎵 Starting audio playback...');
+
+          // Calculate previous duration for progress bar
+          let previousDuration = 0;
+          for (let k = 0; k < currentSlideIndex; k++) {
+            previousDuration += (preloadedSlides[k].audio ? preloadedSlides[k].audio.duration : 0);
+          }
+
+          let slideStartTime = head.audioCtx.currentTime;
+
+          // Start Progress Timer - Increased frequency for accuracy
+          const progressTimer = setInterval(() => {
+            if (currentState === STATE.PLAYING) {
+              // Note: head.isAudioPlaying might glitch, checking state is safer
+              const elapsed = head.audioCtx.currentTime - slideStartTime;
+              const currentTotal = previousDuration + elapsed;
+              const progressPercent = totalDuration > 0 ? Math.min((currentTotal / totalDuration) * 100, 100) : 0;
+
+              // Send progress to parent
+              window.parent.postMessage({
+                type: 'EVT_PROGRESS',
+                progress: progressPercent,
+                currentTime: currentTotal,
+                totalDuration: totalDuration
+              }, '*');
+            }
+          }, 50);
+
+          head.speakAudio(slideAudio);
+          await waitForAudioEndOrPause();
+
+          clearInterval(progressTimer);
+          console.log('✅ Audio playback finished');
+
+          // Send 100% for this slide (or up to next start) to ensure it updates to full if we are at end of lecture
+          // window.parent.postMessage({ type: 'EVT_PROGRESS', ... }) - handled by next loop or end
+
+          // Hide whiteboard text when slide ends
+          whiteboardText.classList.remove('visible');
+
+          // If we paused during the slide, wait here
+          if (currentState === STATE.PAUSED || currentState === STATE.CHAT_MODE) {
+            console.log('⏸️  Paused during slide, will replay');
+            currentSlideIndex--; // Replay / Resume this slide
+            continue;
+          }
+
+          // Slide Ended -> Trigger Prompt
+          await handleSlideBoundary();
+
+          // CRITICAL: After handleSlideBoundary, check if we entered CHAT_MODE or CHAT_SPEAKING
+          // If yes, we need to HOLD here and wait for explicit resume
+          // Also wait for CHAT_SPEAKING to finish (chatbot audio playing)
+          while (currentState === STATE.CHAT_MODE || currentState === STATE.CHAT_SPEAKING) {
+            console.log('💬 Waiting in chat mode... Current state:', currentState);
+            await new Promise(r => setTimeout(r, 200));
+          }
+
+          // If we're still paused after chat, wait for manual resume
+          while (currentState === STATE.PAUSED) {
+            console.log('⏸️  Lecture paused, waiting for manual resume...');
+            await new Promise(r => setTimeout(r, 200));
+          }
+
+          // Only continue to next slide if in PLAYING state
+          if (currentState !== STATE.PLAYING) {
+            console.log('⚠️ State is not PLAYING, waiting...');
+            currentSlideIndex--;
+            continue;
+          }
+        }
+      }
+
+      console.log('🏁 Lecture loop completed');
+      finishLecture();
+    }
+
+    async function waitForAudioEndOrPause() {
+      return new Promise(resolve => {
+        const check = () => {
+          if (currentState === STATE.PAUSED || currentState === STATE.CHAT_MODE || currentState === STATE.CHAT_SPEAKING) {
+            console.log('⏸️  Audio wait interrupted by state change:', currentState);
+            resolve();
+            return;
+          }
+          if (!head.isAudioPlaying) {
+            console.log('✅ Audio playback completed naturally');
+            resolve();
+          } else {
+            setTimeout(check, 100);
+          }
+        };
+        check();
+      });
+    }
+
+    async function handleSlideBoundary() {
+      console.log('\n🎯 ========== SLIDE BOUNDARY ==========');
+      console.log('📊 Current state:', currentState);
+      console.log('📊 Current slide:', currentSlideIndex + 1);
+
+      // Automatically pause all
+      await setMachineState(STATE.WAITING_FOR_QUESTION);
+
+      // ✅ CRITICAL: Add delay BEFORE asking question
+      // This ensures slide audio is completely finished and there's a natural pause
+      console.log('⏳ Waiting 2 seconds before asking question...');
+      await new Promise(r => setTimeout(r, 2000));
+
+      // Check if state changed during the wait
+      if (currentState !== STATE.WAITING_FOR_QUESTION) {
+        console.log('⚠️ State changed during pre-question wait. Aborting question prompt.');
+        return;
+      }
+
+      // --- 1. System asks verbally using browser TTS with GLB lip-sync ---
+      const questionText = "Do you have any questions?";
+
+      console.log('🗣️ Preparing to ask question with GLB lip-sync...');
+
+      // ✅ Use GLB for question instead of browser TTS for lip-sync
+      try {
+        // Ensure AudioContext is running
+        if (head.audioCtx.state !== 'running') {
+          await head.audioCtx.resume();
+          let attempts = 0;
+          while (head.audioCtx.state !== 'running' && attempts < 10) {
+            await new Promise(r => setTimeout(r, 50));
+            attempts++;
+          }
+        }
+
+        // Start GLB animation
+        head.start();
+        await new Promise(r => setTimeout(r, 100));
+
+        // Use browser TTS but with GLB animation
+        const utterance = new SpeechSynthesisUtterance(questionText);
+        utterance.rate = 1;
+        utterance.pitch = 1;
+        utterance.volume = 1;
+        utterance.lang = "en-US";
+
+        window.speechSynthesis.speak(utterance);
+        console.log(`🗣️ Speaking with GLB: "${questionText}"`);
+
+        // Wait for speech to finish
+        await new Promise(resolve => {
+          utterance.onend = () => {
+            console.log('✅ Question prompt finished');
+            head.stop(); // Stop GLB animation
+            resolve();
+          };
+          utterance.onerror = (e) => {
+            console.error('❌ Speech error:', e);
+            head.stop();
+            resolve();
+          };
+
+          // Fallback timeout
+          setTimeout(() => {
+            head.stop();
+            resolve();
+          }, 5000);
+        });
+      } catch (e) {
+        console.error('❌ Question prompt error:', e);
+      }
+
+      // Check again after speaking
+      if (currentState !== STATE.WAITING_FOR_QUESTION) {
+        console.log("⚠️ State changed during question prompt. Aborting.");
+        return;
+      }
+
+      // --- 2. Notify React to show Question Popup ---
+      // React's QuestionPopup will handle:
+      // - Voice recognition
+      // - Text input
+      // - Keyword detection
+      // - 10 second timeout
+      // - Sending CMD_QUESTION_RESPONSE back to iframe
+      console.log('📢 Waiting for React QuestionPopup response...');
+
+      // Wait for state change from React (via CMD_QUESTION_RESPONSE)
+      // Maximum wait time: 15 seconds (fallback if React fails)
+      let waitTime = 0;
+      const maxWaitTime = 15000;
+
+      while (currentState === STATE.WAITING_FOR_QUESTION && waitTime < maxWaitTime) {
+        await new Promise(r => setTimeout(r, 200));
+        waitTime += 200;
+      }
+
+      // If still waiting after 15s, auto-continue (fallback)
+      if (currentState === STATE.WAITING_FOR_QUESTION) {
+        console.log('⏱️ Fallback: No response after 15s, auto-continuing');
+        await setMachineState(STATE.PLAYING);
+      }
+
+      console.log('🎯 ========== END SLIDE BOUNDARY ==========\n');
+    }
+
+    async function handleYesResponse() {
+      if (currentState !== STATE.WAITING_FOR_QUESTION) return;
+      console.log("✅ YES response - entering chat mode");
+
+      // Stop recognition before changing state
+      if (recognition) {
+        try { recognition.stop(); } catch (e) { }
+      }
+
+      await setMachineState(STATE.CHAT_MODE);
+      window.parent.postMessage({ type: 'EVT_VOICE_TRIGGER', response: 'YES' }, '*');
+    }
+
+    function finishLecture() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+      window.parent.postMessage({ type: "EVT_LECTURE_COMPLETED" }, "*");
+    }
+
+    // --- Messaging ---
+
+    window.addEventListener('message', async e => {
+      const { type, text } = e.data;
+
+      switch (type) {
+        case 'CMD_START':
+          if (!mediaRecorder) {
+            setupRecorder();
+            if (!mediaRecorder) {
+              console.error('❌ Failed to setup recorder');
+              return;
+            }
+          }
+
+          if (mediaRecorder.state === 'inactive') {
+            try {
+              // Start with timeslice to ensure regular chunks
+              mediaRecorder.start(1000); // Request data every 1 second
+              console.log('🔴 Recording started with 1s timeslice');
+              startLectureLoop();
+            } catch (e) {
+              console.error('❌ Failed to start recording:', e);
+            }
+          }
+          break;
+        case 'CMD_PAUSE':
+          await setMachineState(STATE.PAUSED);
+          break;
+        case 'CMD_ENTER_CHAT':
+          // User manually opened chat - enter CHAT_MODE
+          console.log('\n💬 ========== ENTERING CHAT MODE ==========');
+          console.log('📊 Current state before chat:', currentState);
+          console.log('📊 Audio playing:', head.isAudioPlaying);
+          console.log('📊 AudioContext state:', head.audioCtx.state);
+
+          // ✅ CRITICAL: Stop all audio when entering chat
+          console.log('🛑 Stopping all audio for chat mode...');
+
+          // Stop slide audio
+          head.stop();
+
+          // Cancel any TTS
+          window.speechSynthesis.cancel();
+
+          // Wait for cleanup
+          await new Promise(r => setTimeout(r, 150));
+
+          // ✅ CRITICAL FIX: Keep AudioContext running for chatbot
+          if (head.audioCtx.state === 'suspended') {
+            console.log('🔊 Resuming AudioContext for chat...');
+            await head.audioCtx.resume();
+            let attempts = 0;
+            while (head.audioCtx.state !== 'running' && attempts < 10) {
+              await new Promise(r => setTimeout(r, 50));
+              attempts++;
+            }
+          }
+
+          console.log('✅ AudioContext kept running for chatbot');
+          console.log('📊 AudioContext state after cleanup:', head.audioCtx.state);
+
+          await setMachineState(STATE.CHAT_MODE);
+          console.log('✅ Entered CHAT_MODE');
+          console.log('💬 ========== CHAT MODE READY ==========\n');
+          break;
+        case 'CMD_EXIT_CHAT':
+          // User closed chat - stay paused, don't auto-resume
+          console.log('\n💬 ========== EXITING CHAT MODE ==========');
+          console.log('📊 Current state:', currentState);
+
+          // Stop any chat audio that might be playing
+          head.stop();
+          window.speechSynthesis.cancel();
+
+          // Transition to PAUSED state (not PLAYING)
+          await setMachineState(STATE.PAUSED);
+
+          console.log('✅ Chat exited. Slide is PAUSED. User must click Play to resume.');
+          console.log('💬 ========== CHAT EXIT COMPLETE ==========\n');
+          break;
+
+        case 'CMD_QUESTION_RESPONSE':
+          // Response from React QuestionPopup (SEPARATE from chatbot)
+          const { response } = e.data;
+          console.log('\n📢 ========== QUESTION RESPONSE RECEIVED ==========');
+          console.log('📊 Response:', response);
+          console.log('📊 Current state:', currentState);
+
+          // Stop voice recognition since React handled it
+          if (recognition) {
+            try { recognition.stop(); } catch (e) { }
+          }
+
+          if (response === 'YES') {
+            // User wants to ask a question → Enter CHAT_MODE
+            console.log('✅ User said YES - entering CHAT_MODE');
+            await setMachineState(STATE.CHAT_MODE);
+          } else {
+            // User said NO or timeout → Continue to next slide
+            console.log('✅ User said NO/TIMEOUT - continuing lecture');
+            await setMachineState(STATE.PLAYING);
+          }
+
+          console.log('📢 ========== QUESTION RESPONSE HANDLED ==========\n');
+          break;
+        case 'CMD_RESUME':
+          // Stop any active voice recognition
+          if (recognition) {
+            try { recognition.stop(); } catch (e) { }
+          }
+          // Exit chat mode and resume playing
+          if (currentState === STATE.CHAT_MODE || currentState === STATE.WAITING_FOR_QUESTION || currentState === STATE.PAUSED) {
+            console.log("Resuming from", currentState);
+            await setMachineState(STATE.PLAYING);
+          }
+          break;
+        case 'CMD_CHAT_REPLY':
+          const { audio_url } = e.data;
+
+          console.log("═══════════════════════════════════════════════════════");
+          console.log("🤖 CMD_CHAT_REPLY RECEIVED");
+          console.log("═══════════════════════════════════════════════════════");
+          console.log("📊 Raw event data:", e.data);
+          console.log("📊 Parsed data:", {
+            hasAudioUrl: !!audio_url,
+            audioUrl: audio_url,
+            hasText: !!text,
+            text: text,
+            textLength: text?.length
+          });
+          console.log("📊 Current System State:", {
+            currentState: currentState,
+            audioCtxState: head.audioCtx.state,
+            isAudioPlaying: head.isAudioPlaying,
+            isSpeaking: head.isSpeaking
+          });
+          console.log("═══════════════════════════════════════════════════════");
+
+
+          if (audio_url) {
+            try {
+              // ========================================
+              // STEP 1: FORCE STOP ALL AUDIO
+              // ========================================
+              console.log("🛑 Stopping all audio sources...");
+              head.stop();
+              window.speechSynthesis.cancel();
+
+              // Wait for cleanup
+              await new Promise(r => setTimeout(r, 200));
+              console.log("✅ Audio cleanup complete");
+
+              // ========================================
+              // STEP 2: ENSURE AUDIOCONTEXT IS RUNNING
+              // ========================================
+              console.log("� AudioContext state:", head.audioCtx.state);
+
+              if (head.audioCtx.state !== 'running') {
+                console.log("⚠️ AudioContext not running, attempting resume...");
+                await head.audioCtx.resume();
+
+                let attempts = 0;
+                while (head.audioCtx.state !== 'running' && attempts < 20) {
+                  await new Promise(r => setTimeout(r, 100));
+                  attempts++;
+                }
+                console.log("✅ AudioContext resumed:", head.audioCtx.state);
+              }
+
+              // ========================================
+              // STEP 3: TRANSITION TO CHAT_SPEAKING STATE
+              // ========================================
+              await setMachineState(STATE.CHAT_SPEAKING);
+              console.log("✅ State: CHAT_SPEAKING");
+
+              // ========================================
+              // STEP 4: TRY GLB LIP-SYNC AUDIO
+              // ========================================
+              let audioPlayed = false;
+
+              try {
+                console.log("📥 Loading chat audio for lip-sync...");
+                const preparedChatAudio = await prepareSlideAudio(audio_url, text || "");
+
+                if (preparedChatAudio && preparedChatAudio.audio) {
+                  // Start GLB animation
+                  head.start();
+                  await new Promise(r => setTimeout(r, 100));
+
+                  // Play with lip-sync
+                  console.log("🎵 Playing with lip-sync...");
+                  head.speakAudio(preparedChatAudio);
+
+                  // Wait a bit and check
+                  await new Promise(r => setTimeout(r, 500));
+
+                  if (head.isAudioPlaying) {
+                    audioPlayed = true;
+                    console.log("✅ GLB lip-sync audio playing!");
+
+                    // Monitor for completion
+                    const checkEnd = setInterval(() => {
+                      if (!head.isAudioPlaying) {
+                        clearInterval(checkEnd);
+                        console.log("✅ Chatbot audio finished");
+                        setMachineState(STATE.CHAT_MODE).catch(console.error);
+                      }
+                    }, 100);
+                  } else {
+                    console.warn("⚠️ GLB audio not playing, trying fallback...");
+                  }
+                }
+              } catch (glbError) {
+                console.error("❌ GLB audio error:", glbError.message);
+              }
+
+              // ========================================
+              // STEP 5: FALLBACK - Direct Audio Element
+              // ========================================
+              if (!audioPlayed) {
+                console.log("� FALLBACK: Playing audio directly...");
+
+                try {
+                  const audioElement = new Audio(audio_url);
+                  audioElement.volume = 1;
+
+                  // Start GLB animation (no lip-sync but at least moves)
+                  head.start();
+
+                  audioElement.onplay = () => {
+                    console.log("✅ Fallback audio started playing");
+                  };
+
+                  audioElement.onended = () => {
+                    console.log("✅ Fallback audio finished");
+                    head.stop();
+                    setMachineState(STATE.CHAT_MODE).catch(console.error);
+                  };
+
+                  audioElement.onerror = (e) => {
+                    console.error("❌ Fallback audio error:", e);
+                    head.stop();
+                    setMachineState(STATE.CHAT_MODE).catch(console.error);
+                  };
+
+                  await audioElement.play();
+                  audioPlayed = true;
+                  console.log("✅ Fallback audio playing!");
+                } catch (fallbackError) {
+                  console.error("❌ Fallback audio failed:", fallbackError);
+                }
+              }
+
+              // ========================================
+              // STEP 6: FINAL FALLBACK - TTS
+              // ========================================
+              if (!audioPlayed && text) {
+                console.log("🗣️ FINAL FALLBACK: Using TTS...");
+
+                head.start();
+
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = "en-IN";
+                utterance.rate = 1;
+
+                utterance.onend = () => {
+                  head.stop();
+                  setMachineState(STATE.CHAT_MODE).catch(console.error);
+                };
+
+                window.speechSynthesis.speak(utterance);
+                console.log("✅ TTS fallback playing");
+              }
+
+            } catch (err) {
+              // ========================================
+              // ERROR HANDLING + TTS FALLBACK
+              // ========================================
+              console.error("❌ Chatbot audio failed:", err);
+              console.error("📊 Error state:", {
+                message: err.message,
+                contextState: head.audioCtx.state,
+                isPlaying: head.isAudioPlaying,
+                currentState: currentState
+              });
+
+              // Fallback to TTS if audio fails
+              if (text) {
+                console.log("🗣️ Falling back to TTS");
+
+                try {
+                  window.speechSynthesis.cancel();
+                  head.stop();
+
+                  // Ensure AudioContext is running for TTS
+                  if (head.audioCtx.state !== 'running') {
+                    await head.audioCtx.resume();
+
+                    let attempts = 0;
+                    while (head.audioCtx.state !== 'running' && attempts < 10) {
+                      await new Promise(r => setTimeout(r, 50));
+                      attempts++;
+                    }
+                  }
+
+                  await setMachineState(STATE.CHAT_SPEAKING);
+
+                  const chatUtterance = new SpeechSynthesisUtterance(text);
+                  chatUtterance.rate = 1;
+                  chatUtterance.pitch = 1;
+                  chatUtterance.volume = 1;
+                  chatUtterance.lang = "en-IN";
+
+                  chatUtterance.onend = () => {
+                    console.log("✅ TTS finished");
+                    setMachineState(STATE.CHAT_MODE).catch(e => {
+                      console.error("Failed to return to CHAT_MODE:", e);
+                    });
+                  };
+
+                  chatUtterance.onerror = (e) => {
+                    console.error("❌ TTS error:", e);
+                  };
+
+                  window.speechSynthesis.speak(chatUtterance);
+                  console.log("✅ TTS fallback playing");
+
+                } catch (ttsErr) {
+                  console.error("❌ TTS fallback also failed:", ttsErr);
+                }
+              }
+            }
+          } else if (text) {
+            // ========================================
+            // NO AUDIO URL - USE TTS DIRECTLY
+            // ========================================
+            console.log("🗣️ No audio URL, using TTS");
+
+            try {
+              window.speechSynthesis.cancel();
+              head.stop();
+
+              // Ensure AudioContext is running
+              if (head.audioCtx.state !== 'running') {
+                await head.audioCtx.resume();
+
+                let attempts = 0;
+                while (head.audioCtx.state !== 'running' && attempts < 10) {
+                  await new Promise(r => setTimeout(r, 50));
+                  attempts++;
+                }
+              }
+
+              await setMachineState(STATE.CHAT_SPEAKING);
+
+              const chatUtterance = new SpeechSynthesisUtterance(text);
+              chatUtterance.rate = 1;
+              chatUtterance.pitch = 1;
+              chatUtterance.volume = 1;
+              chatUtterance.lang = "en-IN";
+
+              chatUtterance.onend = () => {
+                console.log("✅ TTS finished");
+                setMachineState(STATE.CHAT_MODE).catch(e => {
+                  console.error("Failed to return to CHAT_MODE:", e);
+                });
+              };
+
+              chatUtterance.onerror = (e) => {
+                console.error("❌ TTS error:", e);
+              };
+
+              window.speechSynthesis.speak(chatUtterance);
+              console.log("✅ TTS playback started");
+
+            } catch (ttsErr) {
+              console.error("❌ TTS failed:", ttsErr);
+            }
+          }
+          break;
+        case 'CMD_STOP':
+          finishLecture();
+          break;
+      }
+    });
+
+    // --- Setup ---
+
+    // function setupRecorder() {
+    //   console.log('🎬 Setting up recorder...');
+
+    //   const canvas = document.querySelector('#avatar canvas') || document.querySelector('canvas');
+    //   if (!canvas) {
+    //     console.error('❌ Canvas not found!');
+    //     return;
+    //   }
+
+    //   const videoStream = canvas.captureStream(30);
+    //   const combined = new MediaStream([
+    //     ...videoStream.getVideoTracks(),
+    //     ...audioDest.stream.getAudioTracks()
+    //   ]);
+
+    //   // Try different codecs in order of preference
+    //   const codecOptions = [
+    //     { mimeType: 'video/mp4;codecs="avc1.42E01E,mp4a.40.2"', ext: 'mp4', name: 'MP4 (H.264)' },
+    //     { mimeType: 'video/webm;codecs=vp9,opus', ext: 'webm', name: 'WebM (VP9)' },
+    //     { mimeType: 'video/webm;codecs=vp8,opus', ext: 'webm', name: 'WebM (VP8)' },
+    //     { mimeType: 'video/webm', ext: 'webm', name: 'WebM (default)' }
+    //   ];
+
+    //   let selectedCodec = null;
+    //   for (const codec of codecOptions) {
+    //     if (MediaRecorder.isTypeSupported(codec.mimeType)) {
+    //       selectedCodec = codec;
+    //       console.log(`✅ Using codec: ${codec.name} (${codec.mimeType})`);
+    //       break;
+    //     }
+    //   }
+
+    //   if (!selectedCodec) {
+    //     console.error('❌ No supported codec found!');
+    //     selectedCodec = { mimeType: '', ext: 'webm', name: 'Browser default' };
+    //   }
+
+    //   try {
+    //     const options = {
+    //       videoBitsPerSecond: 5000000, // 5 Mbps for high quality
+    //       audioBitsPerSecond: 128000   // 128 kbps for audio
+    //     };
+
+    //     if (selectedCodec.mimeType) {
+    //       options.mimeType = selectedCodec.mimeType;
+    //     }
+
+    //     mediaRecorder = new MediaRecorder(combined, options);
+
+    //     mediaRecorder.ondataavailable = e => {
+    //       if (e.data.size > 0) {
+    //         recordedChunks.push(e.data);
+    //         console.log(`📦 Chunk received: ${(e.data.size / 1024 / 1024).toFixed(2)} MB`);
+    //       }
+    //     };
+
+    //     mediaRecorder.onstop = () => {
+    //       console.log(`🎬 Recording stopped. Total chunks: ${recordedChunks.length}`);
+    //       const totalSize = recordedChunks.reduce((sum, chunk) => sum + chunk.size, 0);
+    //       console.log(`📊 Total size: ${(totalSize / 1024 / 1024).toFixed(2)} MB`);
+
+    //       const blob = new Blob(recordedChunks, {
+    //         type: selectedCodec.mimeType || 'video/webm'
+    //       });
+
+    //       recordedChunks = [];
+
+    //       // Send to parent with metadata
+    //       window.parent.postMessage({
+    //         type: 'RECORDING_DATA',
+    //         blob: blob,
+    //         extension: selectedCodec.ext,
+    //         codec: selectedCodec.name,
+    //         size: blob.size
+    //       }, '*');
+
+    //       console.log('✅ Recording sent to parent');
+    //     };
+
+    //     mediaRecorder.onerror = (e) => {
+    //       console.error('❌ MediaRecorder error:', e);
+    //     };
+
+    //     mediaRecorder.onstart = () => {
+    //       console.log('🔴 Recording started');
+    //     };
+
+    //     mediaRecorder.onpause = () => {
+    //       console.log('⏸️  Recording paused');
+    //     };
+
+    //     mediaRecorder.onresume = () => {
+    //       console.log('▶️  Recording resumed');
+    //     };
+
+    //     console.log('✅ Recorder setup complete');
+
+    //   } catch (e) {
+    //     console.error('❌ Failed to create MediaRecorder:', e);
+    //   }
+    // }
+
+
+
+    function setupRecorder() {
+      console.log('🎬 Setting up recorder (Video Only Mode for Lip-Sync Safety)...');
+
+      const canvas = document.querySelector('#avatar canvas') || document.querySelector('canvas');
+      if (!canvas) {
+        console.error('❌ Canvas not found!');
+        return;
+      }
+
+      // Sirf Video Stream lein (Audio hata diya taaki Lip-Sync na tute)
+      const videoStream = canvas.captureStream(30);
+
+      // 🟢 CHANGE: Humne audioDest hata diya hai
+      const combined = new MediaStream([
+<<<<<<< HEAD
+        ...videoStream.getVideoTracks(),
+        // ...audioDest.stream.getAudioTracks()
+=======
+        ...videoStream.getVideoTracks()
+        // Audio tracks removed temporarily to fix lip-sync
+>>>>>>> raj_dev
+      ]);
+
+      // Codecs logic same rahega
+      const codecOptions = [
+        { mimeType: 'video/mp4;codecs="avc1.42E01E,mp4a.40.2"', ext: 'mp4', name: 'MP4 (H.264)' },
+        { mimeType: 'video/webm;codecs=vp9,opus', ext: 'webm', name: 'WebM (VP9)' },
+        { mimeType: 'video/webm', ext: 'webm', name: 'WebM (default)' }
+      ];
+
+      let selectedCodec = null;
+      for (const codec of codecOptions) {
+        if (MediaRecorder.isTypeSupported(codec.mimeType)) {
+          selectedCodec = codec;
+          break;
+        }
+      }
+
+      if (!selectedCodec) {
+        selectedCodec = { mimeType: '', ext: 'webm', name: 'Browser default' };
+      }
+
+      try {
+        mediaRecorder = new MediaRecorder(combined, {
+          mimeType: selectedCodec.mimeType,
+          videoBitsPerSecond: 5000000
+        });
+
+        mediaRecorder.ondataavailable = e => {
+          if (e.data.size > 0) recordedChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(recordedChunks, { type: selectedCodec.mimeType });
+          recordedChunks = [];
+          window.parent.postMessage({
+            type: 'RECORDING_DATA',
+            blob: blob,
+            extension: selectedCodec.ext
+          }, '*');
+        };
+
+        console.log('✅ Recorder setup complete (Video Only)');
+      } catch (e) {
+        console.error('❌ Failed to create MediaRecorder:', e);
+      }
+    }
+
+    // Texture loader removed to keep background transparent
+    // CSS #background handles the image now
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await head.showAvatar({
+        url: 'https://models.readyplayer.me/692dcb2e176ba02c5bc925c0.glb?morphTargets=ARKit,Oculus+Visemes,mouthOpen,mouthSmile,eyesClosed,eyesLookUp,eyesLookDown&textureSizeLimit=1024&textureFormat=png',
+        body: 'M',
+        avatarMood: 'neutral',
+        lipsyncLang: 'en'
+      });
+      loadLectureData();
+    });
+
+
+    // Relay activity
+    const report = () => window.parent.postMessage({ type: 'USER_ACTIVITY' }, '*');
+    document.addEventListener('mousemove', report);
+    document.addEventListener('touchstart', report);
+    document.addEventListener('click', report);
+
+    // Auto-resume helper for initial interaction
+    document.addEventListener('click', () => {
+      if (head.audioCtx && head.audioCtx.state === 'suspended' && !isPaused) {
+        head.audioCtx.resume();
+        console.log("AudioContext resumed by user interaction");
+      }
+    }, { once: true });
+
+  </script>
+</head>
+
+<body>
+  <div id="background"></div>
+  <div id="avatar"></div>
+
+  <!-- Whiteboard Board Area -->
+  <!-- <div id="whiteboardBoard">
+    <img src="/backgrounds/board.png" alt="Whiteboard" />
+    <div id="whiteboardTextContent"></div>
+  </div> -->
+
+
+  <!-- Slide Progress Bar -->
+  <div id="slideProgressContainer">
+    <div id="slideProgressInfo">
+      <span id="slideProgressText">Slide 1 / 1</span>
+      <span id="slideProgressPercentage">0%</span>
+    </div>
+    <div id="slideProgressBarBg">
+      <div id="slideProgressBarFill" style="width: 0%"></div>
+    </div>
+  </div>
+
+<<<<<<< HEAD
+  <!-- Slide Progress Bar -->
+  <div id="slideProgressContainer">
+    <div id="slideProgressInfo">
+      <span id="slideProgressText">Slide 1 / 1</span>
+      <span id="slideProgressPercentage">0%</span>
+    </div>
+    <div id="slideProgressBarBg">
+      <div id="slideProgressBarFill" style="width: 0%"></div>
+    </div>
+  </div>
+
+  <!-- <div id="controls">
+    <button id="unlockAudio">Start</button>
+    <textarea id="json" readonly></textarea>
+  </div> -->
+=======
+>>>>>>> raj_dev
+  <div id="loading"></div>
+
+  <!-- Narration Text Overlay (bottom fallback) -->
+  <div id="narrationOverlay">
+    <p id="narrationText"></p>
+  </div>
+</body>
+
+</html>

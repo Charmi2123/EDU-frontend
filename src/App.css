@@ -1,0 +1,242 @@
+@import "tailwindcss";
+
+
+/* Hide native scrollbars but keep scrolling */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+  /* Chrome, Safari, Opera */
+}
+
+.header-1 {
+  font-size: 24px;
+}
+
+.header-2 {
+  font-size: 16px;
+}
+
+.header-3 {
+  font-size: 14px;
+}
+
+.header-4 {
+  font-size: 12px;
+}
+
+/* Hide browser's default password reveal icon and autofill icons */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear,
+input[type="text"]::-ms-reveal,
+input[type="text"]::-ms-clear {
+  display: none !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+input::-webkit-credentials-auto-fill-button,
+input::-webkit-contacts-auto-fill-button {
+  visibility: hidden;
+  display: none !important;
+  pointer-events: none;
+  height: 0;
+  width: 0;
+  margin: 0;
+}
+
+/* Video progress bar styles */
+.video-progress {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.video-progress::-webkit-slider-track {
+  background: #525252;
+  height: 8px;
+  border-radius: 4px;
+}
+
+.video-progress::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  background: white;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  border: 2px solid #1f2430;
+  cursor: pointer;
+  margin-top: -4px;
+  transition: transform 0.15s ease;
+}
+
+.video-progress::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.video-progress::-moz-range-track {
+  background: #525252;
+  height: 8px;
+  border-radius: 4px;
+}
+
+.video-progress::-moz-range-thumb {
+  background: white;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  border: 2px solid #1f2430;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.video-progress::-moz-range-thumb:hover {
+  transform: scale(1.2);
+}
+
+/* Smooth progress bar fill */
+.progress-fill {
+  transition: width 0.1s linear;
+  will-change: width;
+}
+
+/* Transparent autofill for inputs - works with both dark and light themes */
+input:-webkit-autofill,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px transparent inset;
+  box-shadow: 0 0 0 1000px transparent inset;
+  transition: background-color 9999s ease-out 0s, color 9999s ease-out 0s;
+}
+
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px transparent inset;
+  box-shadow: 0 0 0 1000px transparent inset;
+  transition: background-color 9999s ease-out 0s, color 9999s ease-out 0s;
+}
+
+/* Fade-in animation for smooth transitions */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Fade In Down */
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-down {
+  animation: fadeInDown 0.6s ease-out forwards;
+}
+
+/* Float Animation */
+@keyframes float {
+  0% {
+    transform: translate(0, 0);
+  }
+
+  50% {
+    transform: translate(0, 20px);
+  }
+
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Video Player Slider Styling */
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: black;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.15s ease;
+}
+
+.slider::-moz-range-thumb:hover {
+  transform: scale(1.2);
+}
+
+/* Custom responsive video controls */
+@media (max-width: 640px) {
+  .slider::-webkit-slider-thumb {
+    width: 10px;
+    height: 10px;
+  }
+
+  .slider::-moz-range-thumb {
+    width: 10px;
+    height: 10px;
+  }
+}
+
+*:focus {
+  outline: none;
+}
+
+/* ✅ KaTeX Error Override - Prevent red error text */
+.katex-error {
+  color: #374151 !important;
+  /* gray-700 instead of red */
+}
+
+.katex .mord.text {
+  color: inherit;
+}
+
+/* Math rendered styling */
+.math-rendered .katex {
+  font-size: 1em;
+  color: inherit;
+}

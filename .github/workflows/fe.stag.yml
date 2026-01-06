@@ -1,0 +1,65 @@
+name: Frontend – Build & Deploy (Staging)
+
+on:
+  push:
+    branches: ["develop"]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REPOSITORY: ${{ secrets.FRONTEND_ECR_REPOSITORY }}
+  IMAGE_TAG: ${{ github.sha }}
+  TARGET_INSTANCE_ID: ${{ secrets.FRONTEND_STAGING_INSTANCE_ID }}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  staging:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & Push Frontend Image (staging)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+            ${{ env.ECR_REPOSITORY }}:staging
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy to Staging (Inline SSM)
+        run: |
+          aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --instance-ids "$TARGET_INSTANCE_ID" \
+            --comment "Deploy FRONTEND STAGING $IMAGE_TAG" \
+            --parameters '{
+              "commands": [
+                "set -e",
+                "aws ecr get-login-password --region '"$AWS_REGION"' | docker login --username AWS --password-stdin '"$ECR_REPOSITORY"'",
+                "docker pull '"$ECR_REPOSITORY:$IMAGE_TAG"'",
+                "docker stop frontend-staging || true",
+                "docker rm frontend-staging || true",
+                "docker run -d \
+                  --name frontend-staging \
+                  -p 8080:80 \
+                  --restart unless-stopped \
+                  '"$ECR_REPOSITORY:$IMAGE_TAG"'"
+              ]
+            }'
