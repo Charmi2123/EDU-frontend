@@ -40,8 +40,6 @@ jobs:
           tags: |
             ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
             ${{ env.ECR_REPOSITORY }}:staging
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Deploy to Staging (Inline SSM)
         run: |
@@ -56,10 +54,6 @@ jobs:
                 "docker pull '"$ECR_REPOSITORY:$IMAGE_TAG"'",
                 "docker stop frontend-staging || true",
                 "docker rm frontend-staging || true",
-                "docker run -d \
-                  --name frontend-staging \
-                  -p 8080:80 \
-                  --restart unless-stopped \
-                  '"$ECR_REPOSITORY:$IMAGE_TAG"'"
+                "docker run -d --name frontend-staging -p 8080:80 --restart unless-stopped '"$ECR_REPOSITORY:$IMAGE_TAG"'"
               ]
             }'
