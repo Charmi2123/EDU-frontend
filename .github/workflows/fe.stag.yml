@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_REGION: ap-south-1
   ECR_REPOSITORY: ${{ secrets.FRONTEND_ECR_REPOSITORY }}
   IMAGE_TAG: ${{ github.sha }}
   TARGET_INSTANCE_ID: ${{ secrets.FRONTEND_STAGING_INSTANCE_ID }}
@@ -27,10 +27,14 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: ap-south-1
 
-      - name: Login to ECR
-        uses: aws-actions/amazon-ecr-login@v2
+      # 🔥 THIS IS THE KEY FIX
+      - name: Login to Amazon ECR (manual)
+        run: |
+          aws ecr get-login-password --region ap-south-1 \
+          | docker login --username AWS --password-stdin \
+          691210491483.dkr.ecr.ap-south-1.amazonaws.com
 
       - name: Build & Push Frontend Image (staging)
         uses: docker/build-push-action@v5
@@ -50,7 +54,7 @@ jobs:
             --parameters '{
               "commands": [
                 "set -e",
-                "aws ecr get-login-password --region '"$AWS_REGION"' | docker login --username AWS --password-stdin '"$ECR_REPOSITORY"'",
+                "aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 691210491483.dkr.ecr.ap-south-1.amazonaws.com",
                 "docker pull '"$ECR_REPOSITORY:$IMAGE_TAG"'",
                 "docker stop frontend-staging || true",
                 "docker rm frontend-staging || true",
